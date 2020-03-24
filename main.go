@@ -59,6 +59,8 @@ func singleThread(arr []int, c chan os.Signal) {
 		go func(i int) {
 			select {
 			case sig := <-c:
+				time.Sleep(time.Duration(arr[i]) * time.Second)
+				fmt.Println("Stopped sleeping at : " + time.Unix(time.Now().Unix(), 0).Format(time.UnixDate))
 				fmt.Printf("--Got %s signal. Aborting...\n--", sig)
 				os.Exit(1)
 			}
