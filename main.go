@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -29,13 +30,14 @@ func main() {
 		singleThread(arr, c)
 	case "m":
 		//multithread
-		fmt.Print("Input number of concurrency: ")
+		fmt.Print("Input number of concurrency (max = " + strconv.Itoa(len(arr)) + "): ")
 		_, err := fmt.Scan(&cN)
 		n, err := strconv.Atoi(cN)
-		if err != nil {
+		if err != nil || n > len(arr) {
 			fmt.Println("--Not a valid option, terminating now--")
 			break
 		}
+		multiThread(arr, n, c)
 	default:
 		//faultyinput
 		fmt.Println("--Not a valid option, terminating now--")
@@ -66,4 +68,37 @@ func singleThread(arr []int, c chan os.Signal) {
 	fmt.Println("")
 	fmt.Println("Total time : " + strconv.Itoa(tT) + " seconds")
 	fmt.Printf("Time elapsed : %.01f seconds", time.Since(cT).Seconds())
+}
+
+func multiThread(arr []int, n int, c chan os.Signal) {
+
+	var wG sync.WaitGroup
+	cT := time.Unix(time.Now().Unix(), 0)
+	tT := 0
+
+	wG.Add(n)
+
+	for i := 0; i < len(arr); i++ {
+		fmt.Println("Starting to sleep for " + strconv.Itoa(arr[i]) + " seconds at : " + time.Unix(time.Now().Unix(), 0).Format(time.UnixDate))
+		tT += arr[i]
+		go func(i int) {
+			time.Sleep(time.Duration(arr[i]) * time.Second)
+			fmt.Println("Stopped sleeping for " + strconv.Itoa(arr[i]) + " seconds at : " + time.Unix(time.Now().Unix(), 0).Format(time.UnixDate))
+			defer wG.Done()
+		}(i)
+	}
+
+	go func() {
+		select {
+		case sig := <-c:
+			fmt.Printf("--Got %s signal. Aborting...\n--", sig)
+			os.Exit(1)
+		}
+	}()
+
+	wG.Wait()
+	fmt.Println("")
+	fmt.Println("Total time : " + strconv.Itoa(tT) + "seconds")
+	fmt.Printf("Time elapsed : %.0f seconds", time.Since(cT).Seconds())
+
 }
