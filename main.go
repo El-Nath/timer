@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"os/signal"
 	"strconv"
@@ -30,7 +31,7 @@ func main() {
 		singleThread(arr, c)
 	case "m":
 		//multithread
-		fmt.Print("Input number of concurrency (max = " + strconv.Itoa(len(arr)) + "): ")
+		fmt.Print("Input number of concurrencies (max = " + strconv.Itoa(len(arr)) + "): ")
 		_, err := fmt.Scan(&cN)
 		n, err := strconv.Atoi(cN)
 		if err != nil || n > len(arr) {
@@ -49,22 +50,39 @@ func singleThread(arr []int, c chan os.Signal) {
 
 	cT := time.Unix(time.Now().Unix(), 0)
 	tT := 0
+	lI := 0
+	var sI string
 
-	for i := 0; i < len(arr); i++ {
-		fmt.Print("Starting to sleep for " + strconv.Itoa(arr[i]) + " seconds at : " + time.Unix(time.Now().Unix(), 0).Format(time.UnixDate) + " -- ")
-		tT += arr[i]
-		time.Sleep(time.Duration(arr[i]) * time.Second)
-		fmt.Println("Stopped sleeping at : " + time.Unix(time.Now().Unix(), 0).Format(time.UnixDate))
+	for _, x := range arr {
+		fmt.Print("Starting to sleep for " + strconv.Itoa(x) + " seconds at : " + time.Unix(time.Now().Unix(), 0).Format("15:04:05") + " -- ")
+		tT += x
+		lI++
 
-		go func(i int) {
+		switch lI {
+		case 1:
+			sI = "st iteration at "
+		case 2:
+			sI = "nd iterations at "
+		case 3:
+			sI = "rd iterations at "
+		default:
+			sI = "th iterations at "
+		}
+
+		time.Sleep(time.Duration(x) * time.Second)
+		fmt.Println("Stopped sleeping at : " + time.Unix(time.Now().Unix(), 0).Format("15:04:05"))
+
+		go func() {
 			select {
 			case sig := <-c:
-				time.Sleep(time.Duration(arr[i]) * time.Second)
-				fmt.Println("Stopped sleeping at : " + time.Unix(time.Now().Unix(), 0).Format(time.UnixDate))
-				fmt.Printf("--Got %s signal. Aborting...\n--", sig)
+				time.Sleep(time.Duration(math.Ceil(float64(tT)-time.Since(cT).Seconds())) * time.Second)
+				fmt.Println("Aborted on : " + strconv.Itoa(lI) + sI + time.Unix(time.Now().Unix(), 0).Format("15:04:05"))
+				fmt.Printf("Got %s signal. Aborting...\n", sig)
+				fmt.Printf("Time elapsed : %.1f seconds\n", time.Since(cT).Seconds())
+				fmt.Println("Total time : " + strconv.Itoa(tT) + " seconds")
 				os.Exit(1)
 			}
-		}(i)
+		}()
 	}
 
 	fmt.Println("")
